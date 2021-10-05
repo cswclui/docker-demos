@@ -1,4 +1,4 @@
-# Steps
+# Prometheus, Grafana and Node Exporter
 
 Create a docker network for communication between the different containers.
 
@@ -63,7 +63,7 @@ Access localhost:3000. The username and password is `admin`.
 Add your data source->select prometheus. Set the URL to be `http://prometheus:9090`. Test and Save the data source.
 
 
-Visit the Explore page in Grafana  Create a dashboard to show the total and available memory of the nodes (in Gigabytes) using the following metric
+Visit the Explore page in Grafana  Create a dashboard to show the total and available memory of the nodes (in Gigabytes) using the following metrics:
 
 - node_memory_MemAvailable_bytes/(1024*1024*1024)
 - node_memory_MemTotal_bytes/(1024*1024*1024)

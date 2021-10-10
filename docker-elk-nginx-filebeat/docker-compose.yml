@@ -38,7 +38,7 @@ services:
         target: /usr/share/logstash/pipeline
         read_only: true
     ports:
-      - "5001:5000"
+      - "5000:5000"
       - "9600:9600"
     expose: 
       - "5044"
@@ -65,6 +65,17 @@ services:
       - elk
     depends_on:
       - elasticsearch
+
+  app:
+    build : ./app
+    volumes:
+      - ./app/:/usr/src/app
+      - /usr/src/app/node_modules/ # make node_module empty in container
+    command: npm start
+    ports:
+      - "3000:3000"
+    networks:
+      - elk
 
   nginx:
     build: ./nginx

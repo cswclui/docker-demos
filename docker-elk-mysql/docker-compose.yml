@@ -1,0 +1,106 @@
+version: '3.2'
+
+services:
+  elasticsearch:
+    build:
+      context: elasticsearch/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        read_only: true
+      - type: volume
+        source: elasticsearch
+        target: /usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ELASTIC_PASSWORD: changeme
+    networks:
+      - elk
+
+
+  kibana:
+    build:
+      context: kibana/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+    ports:
+      - "5601:5601"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    build: ./filebeat
+    entrypoint: "filebeat -e -strict.perms=false"
+    volumes:
+      - ./filebeat/config/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./logs/mysql:/var/log/mysql/
+      #- ./nginx/log:/var/log/nginx
+    user: root
+    networks:
+      - elk
+    depends_on: 
+      - elasticsearch
+      - kibana
+
+
+  #Metricbeat container
+  metricbeat:
+    container_name: metricbeat
+    hostname: metricbeat
+    user: root
+    image: docker.elastic.co/beats/metricbeat:${ELK_VERSION}
+    volumes:
+      #Mount the metricbeat configuration so users can make edit
+      - ./config/metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml
+      #Mount the modules.d directory into the container. This allows user to potentially make changes to the modules and they will be dynamically loaded.
+      - ./config/metricbeat/modules.d/:/usr/share/metricbeat/modules.d/
+    command: metricbeat -e -system.hostfs=/hostfs -E output.elasticsearch.username=elastic -E output.elasticsearch.password=changeme -strict.perms=false
+    environment:
+      - "MYSQL_ROOT_PASSWORD=12345"
+    depends_on:
+      #wait for the these services to come up. This ensures the logs are available and ES exists for indexing
+      - elasticsearch
+    networks:
+      - elk
+
+      
+  #Mysql container
+  mysql:
+    container_name: mysql
+    image: mysql:8
+    environment:
+      - "MYSQL_ROOT_PASSWORD=12345"
+    
+    #Expose port 3306 to allow users to connect and perform operations. These will be picked up by Packetbeat, Filebeat and Metricbeat
+    ports: ['3306:3306']
+    command: bash -c "chown -R mysql:mysql /var/log/mysql && exec /entrypoint.sh mysqld"
+    volumes:
+      #Use named volume so mysql data is persisted across restart
+      - mysqldata:/var/lib/mysql/
+      #Logs are mounted to a relative path. These are also accessed by Filebeat and consumed by the Mysql module
+      - ./logs/mysql:/var/log/mysql/
+      - ./config/mysql/conf-file.cnf:/etc/mysql/conf.d/conf-file.cnf
+    networks:
+        - elk
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  elasticsearch:
+    driver: local
+  mysqldata: 
+    driver: local

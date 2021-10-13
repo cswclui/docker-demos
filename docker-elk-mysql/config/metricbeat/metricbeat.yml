@@ -1,0 +1,19 @@
+metricbeat.modules:
+- module: sql
+  metricsets:
+    - query
+  period: 10s
+  hosts: ["root:12345@tcp(mysql:3306)/mysql"]
+  driver: "mysql"
+  sql_query: "select event_time, user_host, command_type, cast(argument as char(1000))  from general_log"
+  sql_response_format: table  
+
+
+#All data indexed to Elasticsearch
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  username: "elastic" 
+  password: "changeme" 
+
+logging.to_files: false
+

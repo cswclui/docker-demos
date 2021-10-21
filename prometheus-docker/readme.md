@@ -30,7 +30,7 @@ scrape_configs:
 
 Start Prometheus:
 
-`docker run -d --network mynetwork  --name prometheus -p 9090:9090 -v /home/user/k8slearn/prometheus-docker/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus`
+`docker run -d --network mynetwork  --name prometheus -p 9090:9090 -v $(pwd):/etc/prometheus/prometheus.yml prom/prometheus`
 
 
 Access the metrics exposed by the node exporter at 
